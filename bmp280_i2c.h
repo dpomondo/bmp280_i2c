@@ -1,6 +1,7 @@
 #ifndef _BMP280_h
 #define _BMP280_h
 
+#include <stdint.h>
 #include <stdio.h>
 #include "hardware/i2c.h"
 /* #include "pico/binary_info.h" */
@@ -8,6 +9,7 @@
 
  // device has default bus address of 0x76
 #define ADDR _u(0x76)
+#define OTHER_ADDR _u(0x77)
 
 // hardware registers
 #define REG_CONFIG _u(0xF5)
@@ -67,6 +69,15 @@ struct bmp280_calib_param {
     int16_t dig_p7;
     int16_t dig_p8;
     int16_t dig_p9;
+};
+
+struct bmp280_operating_range {
+    int8_t min_temp;
+    int8_t max_temp;
+    char* units_temp;
+    int8_t min_pressure;
+    int8_t max_pressure;
+    char* units_pressure;
 };
 
 void bmp280_init() ;

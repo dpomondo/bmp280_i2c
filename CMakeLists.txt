@@ -12,9 +12,16 @@ project(bmp280_i2c C CXX ASM)
 
 pico_sdk_init()
 
+# add_library(aht20_i2c
+#   aht20_i2c.c
+#   aht20_i2c.h
+# )
+
 add_library(bmp280_i2c 
     bmp280_i2c.c
     bmp280_i2c.h
+    aht20_i2c.c
+    aht20_i2c.h
     )
 
 target_link_libraries(bmp280_i2c 

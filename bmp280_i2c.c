@@ -4,6 +4,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  **/
 
+/*
+ * Parameter                  Symbol  Condition     Min     Typ   Max   Units
+Operating temperature range   T A     operational   -40     25    +85   °C
+                                      full accuracy   0           +65
+Operating pressure range      P       full accuracy 300           1100  hPa
+
+ * */
 #include <stdio.h>
 
 #include "hardware/i2c.h"
