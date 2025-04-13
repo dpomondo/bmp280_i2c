@@ -26,6 +26,7 @@ add_library(bmp280_i2c
 
 target_link_libraries(bmp280_i2c 
         pico_stdlib
+        pico_mem_ops
         hardware_i2c
 )
 
