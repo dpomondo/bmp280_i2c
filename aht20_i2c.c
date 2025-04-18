@@ -25,7 +25,8 @@ void aht20_trigger_measurement(i2c_inst_t *i2c) {
     sleep_ms(80);
 }
 
-bool aht_read(i2c_inst_t *i2c, float *temperature, float *humidity) {
+// TODO: add temp units flag so we can have either!
+bool aht_read(i2c_inst_t *i2c, float *temperature_f, float *humidity) {
     uint8_t receive_buf[7] = { 0 };
     i2c_read_timeout_us(i2c, AHT20_ADDR, receive_buf, 7, false, 3000);
 
@@ -35,7 +36,9 @@ bool aht_read(i2c_inst_t *i2c, float *temperature, float *humidity) {
     uint32_t raw_temp = ((uint32_t)(receive_buf[3] & 0x0F) << 16) | (receive_buf[4] << 8) | receive_buf[5];
 
     *humidity = ((float)raw_humidity) * 100 / 1048576.0;
-    *temperature = (((float)raw_temp / 1048576.0) * 200) - 50.0;
+    // *temperature_c = (((float)raw_temp / 1048576.0) * 200) - 50.0;
+    *temperature_f = ((((float)raw_temp / 1048576.0) * 200) - 50.0) * 9 / 5 + 32;
+
 
     return true;
 }
