@@ -8,8 +8,8 @@
 #include "pico/stdlib.h"
 
  // device has default bus address of 0x76
-#define ADDR _u(0x76)
-#define OTHER_ADDR _u(0x77)
+#define PRIMARY_ADDR _u(0x76)
+#define ALT_ADDR _u(0x77)
 
 // hardware registers
 #define REG_CONFIG _u(0xF5)
@@ -71,21 +71,17 @@ struct bmp280_calib_param {
     int16_t dig_p9;
 };
 
-struct bmp280_operating_range {
-    int8_t min_temp;
-    int8_t max_temp;
-    char* units_temp;
-    int8_t min_pressure;
-    int8_t max_pressure;
-    char* units_pressure;
-};
+typedef struct {
+    uint8_t address;
+    i2c_inst_t *i2c;
+} bmp280_t;
 
-void bmp280_init() ;
-void bmp280_read_raw(int32_t* temp, int32_t* pressure) ;
-void bmp280_reset() ;
+void bmp280_init(bmp280_t *bmp280, i2c_inst_t *i2c, bool alt_addr) ;
+void bmp280_read_raw(bmp280_t *bmp280, int32_t* temp, int32_t* pressure) ;
+void bmp280_reset(bmp280_t *bmp280) ;
 int32_t bmp280_convert(int32_t temp, struct bmp280_calib_param* params) ;
 int32_t bmp280_convert_temp(int32_t temp, struct bmp280_calib_param* params) ;
 int32_t bmp280_convert_pressure(int32_t pressure, int32_t temp, struct bmp280_calib_param* params) ;
-void bmp280_get_calib_params(struct bmp280_calib_param* params) ;
+void bmp280_get_calib_params(bmp280_t *bmp280, struct bmp280_calib_param* params) ;
 
 #endif //_BMP280_h

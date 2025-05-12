@@ -17,6 +17,7 @@ Operating pressure range      P       full accuracy 300           1100  hPa
 /* #include "pico/binary_info.h" */
 #include "bmp280_i2c.h"
 #include "pico/stdlib.h"
+#include <stdbool.h>
 
  /* Example code to talk to a BMP280 temperature and pressure sensor
 
@@ -36,8 +37,16 @@ Operating pressure range      P       full accuracy 300           1100  hPa
     GND (pin 38)  -> GND on BMP280 board
  */
 
-#define I2C_PORT_LOCAL i2c1
-void bmp280_init() {
+// #define bmp280->i2c i2c1
+void bmp280_init(bmp280_t *bmp280, i2c_inst_t *i2c, bool alt_addr) {
+// void bmp280_init() {
+    bmp280->i2c = i2c;
+    if (alt_addr == false) {
+        bmp280->address = PRIMARY_ADDR;
+    } else {
+        bmp280->address = ALT_ADDR;
+    }
+
     // use the "handheld device dynamic" optimal setting (see datasheet)
     uint8_t buf[2];
 
@@ -47,34 +56,34 @@ void bmp280_init() {
     // send register number followed by its corresponding value
     buf[0] = REG_CONFIG;
     buf[1] = reg_config_val;
-    i2c_write_blocking(I2C_PORT_LOCAL, ADDR, buf, 2, false);
+    i2c_write_blocking(bmp280->i2c, bmp280->address, buf, 2, false);
 
     // osrs_t x1, osrs_p x4, normal mode operation
     const uint8_t reg_ctrl_meas_val = (0x01 << 5) | (0x03 << 2) | (0x03);
     buf[0] = REG_CTRL_MEAS;
     buf[1] = reg_ctrl_meas_val;
-    i2c_write_blocking(I2C_PORT_LOCAL, ADDR, buf, 2, false);
+    i2c_write_blocking(bmp280->i2c, bmp280->address, buf, 2, false);
 }
 
-void bmp280_read_raw(int32_t* temp, int32_t* pressure) {
+void bmp280_read_raw(bmp280_t *bmp280, int32_t* temp, int32_t* pressure) {
     // BMP280 data registers are auto-incrementing and we have 3 temperature and
     // pressure registers each, so we start at 0xF7 and read 6 bytes to 0xFC
     // note: normal mode does not require further ctrl_meas and config register writes
 
     uint8_t buf[6];
     uint8_t reg = REG_PRESSURE_MSB;
-    i2c_write_blocking(I2C_PORT_LOCAL, ADDR, &reg, 1, true);  // true to keep master control of bus
-    i2c_read_blocking(I2C_PORT_LOCAL, ADDR, buf, 6, false);  // false - finished with bus
+    i2c_write_blocking(bmp280->i2c, bmp280->address, &reg, 1, true);  // true to keep master control of bus
+    i2c_read_blocking(bmp280->i2c, bmp280->address, buf, 6, false);  // false - finished with bus
 
     // store the 20 bit read in a 32 bit signed integer for conversion
     *pressure = (buf[0] << 12) | (buf[1] << 4) | (buf[2] >> 4);
     *temp = (buf[3] << 12) | (buf[4] << 4) | (buf[5] >> 4);
 }
 
-void bmp280_reset() {
+void bmp280_reset(bmp280_t *bmp280) {
     // reset the device with the power-on-reset procedure
     uint8_t buf[2] = { REG_RESET, 0xB6 };
-    i2c_write_blocking(I2C_PORT_LOCAL, ADDR, buf, 2, false);
+    i2c_write_blocking(bmp280->i2c, bmp280->address, buf, 2, false);
 }
 
 // intermediate function that calculates the fine resolution temperature
@@ -123,7 +132,7 @@ int32_t bmp280_convert_pressure(int32_t pressure, int32_t temp, struct bmp280_ca
     return converted;
 }
 
-void bmp280_get_calib_params(struct bmp280_calib_param* params) {
+void bmp280_get_calib_params(bmp280_t *bmp280, struct bmp280_calib_param* params) {
     // raw temp and pressure values need to be calibrated according to
     // parameters generated during the manufacturing of the sensor
     // there are 3 temperature params, and 9 pressure params, each with a LSB
@@ -131,9 +140,9 @@ void bmp280_get_calib_params(struct bmp280_calib_param* params) {
 
     uint8_t buf[NUM_CALIB_PARAMS] = { 0 };
     uint8_t reg = REG_DIG_T1_LSB;
-    i2c_write_blocking(I2C_PORT_LOCAL, ADDR, &reg, 1, true);  // true to keep master control of bus
+    i2c_write_blocking(bmp280->i2c, bmp280->address, &reg, 1, true);  // true to keep master control of bus
     // read in one go as register addresses auto-increment
-    i2c_read_blocking(I2C_PORT_LOCAL, ADDR, buf, NUM_CALIB_PARAMS, false);  // false, we're done reading
+    i2c_read_blocking(bmp280->i2c, bmp280->address, buf, NUM_CALIB_PARAMS, false);  // false, we're done reading
 
     // store these in a struct for later use
     params->dig_t1 = (uint16_t)(buf[1] << 8) | buf[0];
@@ -156,7 +165,7 @@ void bmp280_get_calib_params(struct bmp280_calib_param* params) {
 int main() {
     stdio_init_all();
 
-#if !defined(I2C_PORT_LOCAL) || !defined(PICO_DEFAULT_I2C_SDA_PIN) || !defined(PICO_DEFAULT_I2C_SCL_PIN)
+#if !defined(bmp280->i2c) || !defined(PICO_DEFAULT_I2C_SDA_PIN) || !defined(PICO_DEFAULT_I2C_SCL_PIN)
     #warning i2c / bmp280_i2c example requires a board with I2C pins
         puts("Default I2C pins were not defined");
 #else
@@ -167,7 +176,7 @@ int main() {
     printf("Hello, BMP280! Reading temperaure and pressure values from sensor...\n");
 
     // I2C is "open drain", pull ups to keep signal high when no data is being sent
-    i2c_init(I2C_PORT_LOCAL, 100 * 1000);
+    i2c_init(bmp280->i2c, 100 * 1000);
     gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
